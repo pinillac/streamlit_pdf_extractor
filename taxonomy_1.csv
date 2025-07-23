@@ -1,0 +1,50 @@
+﻿Level 1,Level 2,Tag Code,Regex Pattern,Source,Notes
+Document,Standard,DOC,"(?<![A-Za-z0-9-])\d{3}-[A-Z]-[A-Z]{3,4}-\d{5}-\d{3}(?![A-Za-z0-9-])",Propuesto,"Captura IDs de documentos estándar, ej: 018-A-PID-00012-001"
+Piping,Complex Line,PIPE,"(?i)\b\d{1,2}""-[A-Z]{2,4}-\d{4,6}-([A-Z0-9-]+)\b",Propuesto,"Captura números de línea de tubería, ej: 6""-PT-1234-STEAM"
+Equipment,Pump,P,(?<![A-Za-z0-9])\d{3}P\d{4}([A-Z](?:\/[A-Z])*)?(?![A-Za-z0-9]),PatternManager Original,"Específico para Bombas, maneja sufijos A/B/C"
+Equipment,Furnace,F,(?<![A-Za-z0-9])\d{3}F\d{4}([A-Z](?:\/[A-Z])*)?(?![A-Za-z0-9]),PatternManager Original,Específico para Hornos
+Equipment,Heat Exchanger,E,(?<![A-Za-z0-9])\d{3}E\d{4}[A-Z]?(?![A-Za-z0-9]),PatternManager Original,Específico para Intercambiadores
+Equipment,Vessel,V,(?<![A-Za-z0-9])\d{3}V\d{4}[A-Z]?(?![A-Za-z0-9]),PatternManager Original,Específico para Recipientes
+Equipment,Column,C,\b\d{3}C\d{4}[A-Z]?\b,PatternManager Original,Compite con Compresor. El orden de ejecución es clave.
+Equipment,Compressor,C,(?<![A-Za-z0-9])\d{3}C\d{4}[A-Z]?(?![A-Za-z0-9]),PatternManager Original,
+Instrument,Instrument-Unit,INST,"(?<![A-Za-z0-9-])(\d{3})-([A-Z]{2,4})-(\d{3,4})([A-Z0-9]{1,2})?(?![A-Za-z0-9-])",Propuesto,Captura tags complejos como 157-TAH-9700Z1 o (157-UY-9700Z1)
+Instrument,INSTR,ISA-STD,"(?<![A-Z0-9-])(PT|FT|TE|LT|LIC|PI|FIC|TG|PIT)-\d{3,5}[A-Z]?(?![A-Z0-9-])",PatternManager Original,Captura un conjunto limitado de instrumentos estándar ISA.
+Equipment,EQP SP,EQP,"(?<![A-Za-z0-9])(\d{3})\s?([A-Z]{1,4})(\d+[A-Z]?)(?![A-Za-z0-9])",PatternManager Original,Captura tags sin guiones como 018M6018 o 356SSE0001.
+ElectricalEquipment,General,ELEC-COMMON,(?<![A-Za-z0-9])(BUS|LC|UPS|CB|MOV|MS)(\d+[A-Z]?)(?![A-Za-z0-9]),Propuesto,Componentes eléctricos comunes con prefijos.
+Building,General,BLDG,\b(BLD|ROOM|AREA|FAC|FLR|YD)-[A-Z0-9-]+\b,Propuesto,Captura identificadores de edificios y áreas.
+HVAC,General,HVAC,\b(AC|AHU|CH|DMP|EF)\d+[A-Z]?\b,Propuesto,Captura equipos de HVAC.
+ElectricalEquipment,AMMETER,AM,"(?i)\bAM\d{3}[A-Z]\d[A-Z]{0,2}\b",Taxonomy,Original de la taxonomia
+ElectricalEquipment,BATTERY,BAT,(?i)\bBAT\d{3}[A-Z]\d{2}\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,BUSBAR,BUS,"(?i)\bBUS\d{3,4}[A-Z]\b",Taxonomy,Original de la taxonomia
+ElectricalEquipment,CIRCUIT BREAKER,CB,"(?i)\bCB\d{3,4}[A-Z]\d{1,2}\b",Taxonomy,Original de la taxonomia
+ElectricalEquipment,BATTERY CHARGER,CHG,(?i)\bCHG\d{3}[A-Z]\d{2}\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,CATHODIC RECTIFIER,CR,(?i)\b(0\d{2})?CR\d+\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,GENERATOR,EG,(?i)\bEG\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,CONTACTOR,LC,(?i)\bLC\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,LIGHT FITTING,LF,"(?i)\bLF\d{2,3}[A-Z]\d{1,2}\b",Taxonomy,Original de la taxonomia
+ElectricalEquipment,MOTOR OPERATED VALVE,MOV,(?i)\bMOV\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,STARTER,MS,(?i)\bMS\d{3}[A-Z]\d{2}\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,RECEPTACLES AND WELDING OUTLETS,RCP,(?i)\bRCP\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,RELAY,RL,(?i)\bRL\d{3}\d{3}\/\d[A-Z]\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,RESISTOR,RR,(?i)\bRR\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,SWITCH UNIT,SW,(?i)\bSW\d{3}[A-Z]\d{2}\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,TRANSFORMER,TR,(?i)\bTR\d{3}[A-Z]\d{2}\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,TRANSFER SWITCH,TSW,(?i)\bTSW\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,UNINTERRUPTED POWER SUPPLY,UPS,(?i)\bUPS\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,VOLTMETER,VM,"(?i)\bVM\d{3}[A-Z]\d[A-Z]{0,2}\b",Taxonomy,Original de la taxonomia
+ElectricalEquipment,VOLT STABILISER,VS,(?i)\bVS\d{3}[A-Z]\d\b,Taxonomy,Original de la taxonomia
+ElectricalEquipment,WATTMETER,WM,"(?i)\bWM\d{3}[A-Z]\d[A-Z]{0,2}\b",Taxonomy,Original de la taxonomia
+Piping,P&ID Line Number,PIPE,"(?i)\b\d{3}-\d{1,2}""-[A-Z]-\d{4}-[A-Z0-9]{2,3}(?:-[A-Za-z]{1,2})?\b",Propuesto,"[By-Spec] Captura Line Number de P&ID según Pag.104. Ej: 016-8""-P-1053-B1-Ih"
+Equipment,EQP Standard No-Hyphen,EQP,"(?i)\b\d{3}[A-Z]{1,4}\d{4}[A-Z]{0,3}\b",Propuesto,[By-Spec] Captura Equipment Tag sin guiones según Pag.23. Ej: 062E6211A
+Equipment,EQP Standard With-Hyphen,EQP,"(?i)\b\d{3}-[A-Z]{1,4}-\d{4}(?:-[A-Z]{1,3})?\b",Propuesto,[Vendor-Error] Captura el mismo Equipment Tag pero con guiones. Ej: 062-E-6211-A
+Instrument,Inst Standard No-Hyphen,INST,"(?i)\b\d{3}[A-Z]{2,5}\d{4,5}[A-Z]{0,3}\b",Propuesto,[By-Spec] Captura Instrument Tag sin guiones según Pag.24. Ej: 372TICXX0010AAA
+Instrument,InstStandard With-Hyphen,INST,"(?i)\b\d{3}-[A-Z]{2,5}-\d{4,5}(?:-[A-Z]{1,3})?\b",Propuesto,[Vendor-Error] Captura el mismo Instrument Tag pero con guiones. Ej: 372-TICXX-0010-AAA
+ElectricalEquipment,Bus-Based,ELEC-BUS,(?i)\b(TR|CB|MS|RL|ANN)\d+[A-Z]\d*\b,Propuesto,"[By-Spec] Captura Eq. Eléctrico basado en Bus según Pag.27. Ej: TR0173A5, ANN1843S1"
+ElectricalEquipment,Bus-Based With-Hyphen,ELEC-BUS,(?i)\b(TR|CB|MS|RL|ANN)-\d+-[A-Z]-\d*\b,Propuesto,[Vendor-Error] Captura Eq. Eléctrico basado en Bus pero con guiones. Ej: TR-0173-A-5
+ElectricalEquipment,Unit-Based,ELEC-UNIT,"(?i)\b\d{3}(CR|EF|GTG|M|STG)\d{4,}\b",Propuesto,"[By-Spec] Captura Eq. Eléctrico con prefijo de Unidad según Pag.30. Ej: 056CR0001, 321STG0001"
+ElectricalEquipment,Unit-Based With-Hyphen,ELEC-UNIT,"(?i)\b\d{3}-(CR|EF|GTG|M|STG)-\d{4,}\b",Propuesto,[Vendor-Error] Captura Eq. Eléctrico con Unidad pero con guiones. Ej: 056-CR-0001
+Building,Standard No-Hyphen,BLD,(?i)\b\d{3}(BLD|SRR|SST[A-Z])\d{2}\b,Propuesto,"[By-Spec] Captura Edificios/Subestaciones sin guiones según Pag.26. Ej: 018BLD01, 018SST R01"
+Building,Standard With-Hyphen,BLD,(?i)\b\d{3}-(BLD|SRR|SST-[A-Z])-\d{2}\b,Propuesto,[Vendor-Error] Captura Edificios/Subestaciones pero con guiones. Ej: 018-BLD-01
+Structure,Steel No-Hyphen,STR,(?i)\b\d{3}(PR|STR|SLT|PLF|IS)\d{3}\b,Propuesto,[By-Spec] Captura Estructuras de Acero sin guiones según Pag.27. Ej: 018STR100
+Structure,Steel With-Hyphen,STR,(?i)\b\d{3}-(PR|STR|SLT|PLF|IS)-\d{3}\b,Propuesto,[Vendor-Error] Captura Estructuras de Acero pero con guiones. Ej: 018-STR-100
+Cable,Electrical,CABLE,(?i)\b[A-Z]{3}\d{6}\b,Propuesto,[By-Spec] Captura numeración de Cables Eléctricos según Pag.31. Ej: SPA123456

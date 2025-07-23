@@ -1,0 +1,34 @@
+Tag,Level 1,Level 2,Tag Code,Numbering Format,Example,Regex Pattern,Source,Notes
+Tag,Piping,Complex Line,PIPE,Formato complejo de tuberia,"018-4""-BFW-7008-D3S-lh","\b(?:\d{3}-)?\d{1,2}""-[A-Z]{2,4}-\d{4,6}-[A-Z0-9]+(?:-[a-zA-Z]+)?\b",PatternManager Original,"Captura numeros de area de tubera�a complejos, con unidad y especificaciones opcionales."
+Tag,Piping,Classic Line,PIPE,Formato clasico de tuberiaa,"6""-PT-1234-STEAM","(?i)\b\d{1,2}""-[A-Z]{2,4}-\d{4,6}-([A-Z0-9-]+)\b",Propuesto,Una versión mejorada y más específica del patrón de tuberías.
+Tag,Equipment,Pump,P,U-T-S-Suf,123P1234A/B,"(?<!\d)(\d{3})[-]?([P])[-]?(\d{3,4})[-]?([A-Z](?:\/[A-Z])?)?(?![A-Z0-9])",PatternManager Original,"Patrón específico para bombas,  maneja separadores opcionales y sufijos A/B."
+Tag,Equipment,Furnace,F,U-T-S-Suf,100F2500,(?<![A-Z0-9])\d{3}F\d{4}(?:[A-Z](?:\/[A-Z])?)?(?![A-Z0-9]),PatternManager Original,
+Tag,Equipment,Heat Exchanger,E,U-T-S-Suf,123E4567A,(?<![A-Z0-9])\d{3}E\d{4}[A-Z]?(?![A-Z0-9]),PatternManager Original,
+Tag,Equipment,Vessel,V,U-T-S-Suf,123V4567,(?<![A-Z0-9])\d{3}V\d{4}[A-Z]?(?![A-Z0-9]),PatternManager Original,
+Tag,Equipment,Column,C,U-T-S-Suf,018C0001,\b\d{3}C\d{4}[A-Z]?\b,PatternManager Original,Este compite con Compresor. El orden de ejecución es clave.
+Tag,Equipment,Compressor,C,U-T-S-Suf,123C4567,(?<![A-Z0-9])\d{3}C\d{4}[A-Z]?(?![A-Z0-9]),PatternManager Original,
+Tag,Equipment,Motor,MTR,Fijo,MTR1234,"^\s\d{2,3}MTR\d{4}$",PatternManager Original,
+Tag,Equipment,Tank,TK,Fijo,123TK1234A,"^\s\d{2,3}TK\d{3,4}[A-Z]?$",PatternManager Original,
+Tag,Instrument,Complex With Unit,COMPOUND-INST,U-T-S-Suf,180-TT-4004,"(?<!\d)(\d{3})-([A-Z]{1,4}-\d{3,5}[A-Z]?)(?![A-Z0-9-])",PatternManager Original,"Captura instrumentos con prefijo de unidad, ej. 180-TT-4004"
+Tag,Instrument,Classic,ISA-STD,T-S-Suf,PT-123,"r'(?<![A-Z0-9-])(PT|FT|TE|LT|LIC|PI|FIC|TG|PIT)-\d{3,5}[A-Z]?(?![A-Z0-9-])",PatternManager Original,Captura un conjunto limitado de instrumentos estándar ISA.
+Tag,Instrument,Sample Probe,PROBE,U-T-S,077-AP-1001,\b\d{3}-AP-\d{4}\b,PatternManager Original,
+Tag,Instrument,Analyser,ANALYSER,U-T-S,077-AIT-1001,\b\d{3}-A[A-Z]{2}-\d{4}\b,PatternManager Original,
+Tag,Compound,Unit-Tag No Separator,COMPOUND,UTN,018M6018,"(?<![A-Za-z0-9])(\d{3})\s?([A-Z]{1,4})(\d+[A-Z]?)(?![A-Za-z0-9])",PatternManager Original,Captura tags sin guiones como 018M6018 o 356SSE0001.
+Tag,Compound,Dual Tag with Slash,DUAL-SLASH,Tag/Tag,018T1001A/018T2001A,"(?<![A-Za-z0-9])(\d{3}[A-Z]{1,4}\d+[A-Z]?\/\d{3}[A-Z]{1,4}\d+[A-Z]?)(?![A-Za-z0-9])",PatternManager Original,Captura pares de tags unidos por un slash.
+Tag,ElectricalEquipment,General,ELEC-COMMON,Fijo,BUS4328N,(?<![A-Za-z0-9])(BUS|LC|UPS)(\d+[A-Z]?)(?![A-Za-z0-9]),PatternManager Original,"Componentes eléctricos comunes con prefijos BUS,  LC,  UPS."
+Tag,Building,Building,BLDG,Fijo,BLD-AB01,^\s\d+?BLD-[A-Z]{2}\d{2}$,PatternManager Original,
+Tag,Building,Room,ROOM,Fijo,ROOM-AB01,^\s\d+?ROOM-[A-Z]{2}\d{2}$,PatternManager Original,
+Tag,Building,Area,AREA,Fijo,AREA-01,^\s\d+?AREA-\d{2}$,PatternManager Original,
+Tag,Building,Facility,FAC,Fijo,FAC-AB01,^\s\d+?FAC-[A-Z]{2}\d{2}$,PatternManager Original,
+Tag,Building,Floor,FLR,Fijo,FLR-01,^\s\d+?FLR-\d{2}$,PatternManager Original,
+Tag,Building,Yard,YD,Fijo,YD-AB01,^\s\d+?YD-[A-Z]{2}\d{2}$,PatternManager Original,
+Tag,HVAC,Air Conditioning,AC,Fijo,123AC1234A,"^\s\d{2,3}AC\d{3,4}[A-Z]?$",PatternManager Original,
+Tag,HVAC,Air Handling Unit,AHU,Fijo,123AHU1234A,"^\s\d{2,3}AHU\d{3,4}[A-Z]?$",PatternManager Original,
+Tag,HVAC,Chiller,CH,Fijo,123CH002A,"^\s\d{2,3}CH\d{3}[A-Z]?$",PatternManager Original,
+Tag,HVAC,Damper,DMP,Fijo,10DMP1001,"^\s\d{2,3}DMP\d{4}$",PatternManager Original,
+Tag,HVAC,Exhaust Fan,EF,Fijo,123EF1234A,"^\s\d{2,3}EF\d{3,4}[A-Z]?$",PatternManager Original,
+Tag,Mechanical,Compressor or Blower,K,Fijo,123K1234A,"^\s\d{2,3}K\d{3,4}[A-Z]?$",PatternManager Original,
+Tag,Instrument,Generic by Letter,A,Fijo,100-AE101-1,"^\s\d{2,3}\d+-A[A-Z]*\d+-\d+$",PatternManager Original,"Patrón muy genérico, usar con precaución."
+Tag,Document,Standard,DOC,Area-Discipline-Tipo-Sec-Rev,010-P-CRD-00001-001,\b\d{3}-[A-Z]-[A-Z]{3}-\d{5}-\d{3}\b,PatternManager Original,Captura identificadores de documentos estándar.
+Tag,Document,Project Long,DOC-PROJ,Formato largo de proyecto,076551C-079-SP-0270-001,"\b\d{6}[A-Z]-\d{2,4}[A-Z]?-[A-Z]{2,3}(?:-\d+)+(?:-\d+)?\b",PatternManager Original,Para documentos de proyecto con múltiples segmentos numéricos.
+Tag,Document,Project Short,DOC-PROJ-S,Formato corto de proyecto,076551C-021-ML-214,"\b\d{6}[A-Z]-\d+[A-Z]?-[A-Z]{2,3}-\d+\b",PatternManager Original,

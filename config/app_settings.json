@@ -1,0 +1,143 @@
+{
+  "application": {
+    "name": "Enterprise PDF Tag Extractor",
+    "version": "2.0.0",
+    "description": "Professional PDF processing system for technical equipment tag extraction",
+    "author": "Enterprise Development Team",
+    "license": "Proprietary"
+  },
+  "default_settings": {
+    "processing": {
+      "memory_limit_mb": 1024,
+      "chunk_size": 10,
+      "processing_timeout": 300,
+      "max_workers": 4,
+      "retry_attempts": 2,
+      "enable_caching": true
+    },
+    "file_handling": {
+      "max_file_size_mb": 500,
+      "max_batch_size": 100,
+      "supported_formats": [".pdf"],
+      "temp_directory": "temp",
+      "auto_cleanup_hours": 24
+    },
+    "ui_preferences": {
+      "theme": "light",
+      "show_advanced_options": false,
+      "default_view": "upload",
+      "auto_save_results": true,
+      "results_per_page": 25
+    },
+    "export_options": {
+      "include_context": true,
+      "include_statistics": true,
+      "date_format": "YYYY-MM-DD HH:mm:ss",
+      "csv_encoding": "utf-8",
+      "excel_template": "default"
+    }
+  },
+  "performance_presets": {
+    "fast": {
+      "name": "Fast Processing",
+      "description": "Optimized for speed with moderate accuracy",
+      "settings": {
+        "memory_limit_mb": 3072,
+        "chunk_size": 50,
+        "max_workers": 8,
+        "processing_timeout": 180,
+        "enable_validation": false
+      }
+    },
+    "balanced": {
+      "name": "Balanced",
+      "description": "Balanced performance and accuracy",
+      "settings": {
+        "memory_limit_mb": 1024,
+        "chunk_size": 20,
+        "max_workers": 4,
+        "processing_timeout": 300,
+        "enable_validation": true
+      }
+    },
+    "memory_efficient": {
+      "name": "Memory Efficient",
+      "description": "Minimal memory usage for large files",
+      "settings": {
+        "memory_limit_mb": 512,
+        "chunk_size": 5,
+        "max_workers": 2,
+        "processing_timeout": 600,
+        "enable_validation": true
+      }
+    },
+    "high_accuracy": {
+      "name": "High Accuracy",
+      "description": "Maximum accuracy with detailed extraction",
+      "settings": {
+        "memory_limit_mb": 4096,
+        "chunk_size": 10,
+        "max_workers": 4,
+        "processing_timeout": 900,
+        "enable_validation": true,
+        "enable_context_analysis": true
+      }
+    }
+  },
+  "thresholds": {
+    "large_file_mb": 100,
+    "memory_warning_percent": 80,
+    "cpu_warning_percent": 80,
+    "slow_processing_seconds": 60,
+    "batch_warning_count": 50
+  },
+  "logging": {
+    "level": "INFO",
+    "file_logging": true,
+    "log_directory": "logs",
+    "max_log_size_mb": 100,
+    "log_retention_days": 30,
+    "performance_logging": true
+  },
+  "advanced": {
+    "enable_gpu_acceleration": false,
+    "parallel_extraction": true,
+    "smart_memory_management": true,
+    "adaptive_chunking": true,
+    "pattern_optimization": true,
+    "result_deduplication": true
+  },
+  "api_settings": {
+    "enable_api": false,
+    "api_port": 8501,
+    "api_timeout": 300,
+    "max_concurrent_requests": 10,
+    "require_authentication": true
+  },
+  "visualization": {
+    "chart_height": 400,
+    "max_chart_points": 1000,
+    "color_scheme": "professional",
+    "enable_animations": true,
+    "export_dpi": 300
+  },
+  "quality_control": {
+    "enable_validation": true,
+    "min_confidence_score": 0.8,
+    "flag_suspicious_patterns": true,
+    "validate_tag_format": true,
+    "check_duplicates": true
+  },
+  "notifications": {
+    "enable_notifications": true,
+    "notification_types": ["completion", "error", "warning"],
+    "email_notifications": false,
+    "desktop_notifications": true
+  },
+  "help_resources": {
+    "documentation_url": "https://docs.example.com/pdf-extractor",
+    "support_email": "support@example.com",
+    "tutorial_videos": true,
+    "show_tips": true
+  }
+}

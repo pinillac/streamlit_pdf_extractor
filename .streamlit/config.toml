@@ -1,0 +1,17 @@
+# .streamlit/config.toml
+
+[theme]
+# Color primario para elementos interactivos
+primaryColor="#0078FF"
+
+# Color de fondo principal
+backgroundColor="#FFFFFF"
+
+# Color de fondo para la barra lateral y otros elementos
+secondaryBackgroundColor="#E0F3FF"
+
+# Color del texto principal
+textColor="#31333F"
+
+# Fuente a utilizar (Streamlit soporta 'sans serif', 'serif', y 'monospace')
+font="sans serif"

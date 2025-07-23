@@ -1,0 +1,444 @@
+{
+  "patterns": {
+    "annunciator": {
+      "regex": "^ANN\\d{4}[A-Z]\\d$",
+      "description": "Annunciator",
+      "category": "Electrical Equipment",
+      "examples": ["ANN1234A5", "ANN5678B9"],
+      "isa_category": "ANN",
+      "enabled": true
+    },
+    "battery_bank": {
+      "regex": "^BAT\\d{3}[A-Z]\\d$",
+      "description": "Battery Bank",
+      "category": "Electrical Equipment",
+      "examples": ["BAT123A4", "BAT567B8"],
+      "isa_category": "BAT",
+      "enabled": true
+    },
+    "breaker": {
+      "regex": "^BK[A-Z]{2}\\d{2}$",
+      "description": "Breaker",
+      "category": "Electrical Equipment",
+      "examples": ["BKAP01", "BKDC12"],
+      "isa_category": "BK",
+      "enabled": true
+    },
+    "bus_duct": {
+      "regex": "^BD\\d+$",
+      "description": "Bus Duct",
+      "category": "Electrical Equipment",
+      "examples": ["BD1", "BD15"],
+      "isa_category": "BD",
+      "enabled": true
+    },
+    "cathodic_protection": {
+      "regex": "^CP[A-Z]+\\d+$",
+      "description": "Cathodic Protection",
+      "category": "Electrical Equipment",
+      "examples": ["CPIMP1", "CPTEST4"],
+      "isa_category": "CP",
+      "enabled": true
+    },
+    "cable_tray": {
+      "regex": "^CT[A-Z]+\\d+[A-Z]?$",
+      "description": "Cable Tray",
+      "category": "Electrical Equipment",
+      "examples": ["CTI1", "CTP2A"],
+      "isa_category": "CT",
+      "enabled": true
+    },
+    "diesel_generator": {
+      "regex": "^DG\\d$",
+      "description": "Diesel Generator",
+      "category": "Electrical Equipment",
+      "examples": ["DG1", "DG2"],
+      "isa_category": "DG",
+      "enabled": true
+    },
+    "emergency_generator": {
+      "regex": "^EG\\d$",
+      "description": "Emergency Generator",
+      "category": "Electrical Equipment",
+      "examples": ["EG1", "EG2"],
+      "isa_category": "EG",
+      "enabled": true
+    },
+    "electric_heat_trace": {
+      "regex": "^ETP\\d+C\\d+$",
+      "description": "Electric Heat Trace",
+      "category": "Electrical Equipment",
+      "examples": ["ETP1C1", "ETP2C12"],
+      "isa_category": "ET",
+      "enabled": true
+    },
+    "junction_box": {
+      "regex": "^JB\\d{4}$",
+      "description": "Junction Box",
+      "category": "Electrical Equipment",
+      "examples": ["JB1001", "JB2034"],
+      "isa_category": "JB",
+      "enabled": true
+    },
+    "lighting_fixture": {
+      "regex": "^LF\\d{4}$",
+      "description": "Lighting Fixture",
+      "category": "Electrical Equipment",
+      "examples": ["LF1001", "LF2034"],
+      "isa_category": "LF",
+      "enabled": true
+    },
+    "lighting_panel": {
+      "regex": "^LP[A-Z0-9]+[A-Z]?$",
+      "description": "Lighting Panel",
+      "category": "Electrical Equipment",
+      "examples": ["LPA", "LP1B"],
+      "isa_category": "LP",
+      "enabled": true
+    },
+    "motor_control_center": {
+      "regex": "^MCC\\d+[A-Z]$",
+      "description": "Motor Control Center",
+      "category": "Electrical Equipment",
+      "examples": ["MCC1A", "MCC2B"],
+      "isa_category": "MCC",
+      "enabled": true
+    },
+    "motor": {
+      "regex": "^MTR\\d{4}$",
+      "description": "Motor",
+      "category": "Electrical Equipment",
+      "examples": ["MTR1234", "MTR5678"],
+      "isa_category": "MTR",
+      "enabled": true
+    },
+    "receptacle": {
+      "regex": "^RCPT\\d{4}$",
+      "description": "Receptacle",
+      "category": "Electrical Equipment",
+      "examples": ["RCPT1001", "RCPT2034"],
+      "isa_category": "RCPT",
+      "enabled": true
+    },
+    "switch": {
+      "regex": "^SW\\d{4}$",
+      "description": "Switch",
+      "category": "Electrical Equipment",
+      "examples": ["SW1001", "SW2034"],
+      "isa_category": "SW",
+      "enabled": true
+    },
+    "switchgear": {
+      "regex": "^SWG\\d{3}[A-Z]?$",
+      "description": "Switchgear",
+      "category": "Electrical Equipment",
+      "examples": ["SWG001", "SWG002A"],
+      "isa_category": "SWG",
+      "enabled": true
+    },
+    "uninterruptible_power_supply": {
+      "regex": "^UPS\\d{3}$",
+      "description": "Uninterruptible Power Supply",
+      "category": "Electrical Equipment",
+      "examples": ["UPS001", "UPS002"],
+      "isa_category": "UPS",
+      "enabled": true
+    },
+    "transformer": {
+      "regex": "^XFMR\\d{3}[A-Z]?$",
+      "description": "Transformer",
+      "category": "Electrical Equipment",
+      "examples": ["XFMR001", "XFMR002B"],
+      "isa_category": "XFMR",
+      "enabled": true
+    },
+    "air_conditioning": {
+      "regex": "^\\d{2,3}AC\\d{3,4}[A-Z]?$",
+      "description": "Air Conditioning",
+      "category": "HVAC",
+      "examples": ["10AC123", "123AC1234A"],
+      "isa_category": "AC",
+      "enabled": true
+    },
+    "air_handling_unit": {
+      "regex": "^\\d{2,3}AHU\\d{3,4}[A-Z]?$",
+      "description": "Air Handling Unit",
+      "category": "HVAC",
+      "examples": ["10AHU123", "123AHU1234A"],
+      "isa_category": "AHU",
+      "enabled": true
+    },
+    "chiller": {
+      "regex": "^\\d{2,3}CH\\d{3}[A-Z]?$",
+      "description": "Chiller",
+      "category": "HVAC",
+      "examples": ["10CH001", "123CH002A"],
+      "isa_category": "CH",
+      "enabled": true
+    },
+    "damper": {
+      "regex": "^\\d{2,3}DMP\\d{4}$",
+      "description": "Damper",
+      "category": "HVAC",
+      "examples": ["10DMP1001", "123DMP2002"],
+      "isa_category": "DMP",
+      "enabled": true
+    },
+    "exhaust_fan": {
+      "regex": "^\\d{2,3}EF\\d{3,4}[A-Z]?$",
+      "description": "Exhaust Fan",
+      "category": "HVAC",
+      "examples": ["10EF123", "123EF1234A"],
+      "isa_category": "EF",
+      "enabled": true
+    },
+    "compressor_blower": {
+      "regex": "^\\d{2,3}K\\d{3,4}[A-Z]?$",
+      "description": "Compressor / Blower",
+      "category": "Mechanical",
+      "examples": ["10K123", "123K1234A"],
+      "isa_category": "K",
+      "enabled": true
+    },
+    "pump": {
+      "regex": "^\\d{2,3}P\\d{3,4}[A-Z]?$",
+      "description": "Pump",
+      "category": "Mechanical",
+      "examples": ["10P123", "123P1234A"],
+      "isa_category": "P",
+      "enabled": true
+    },
+    "tank_vessel": {
+      "regex": "^\\d{2,3}TK\\d{3,4}[A-Z]?$",
+      "description": "Tank / Vessel",
+      "category": "Mechanical",
+      "examples": ["10TK123", "123TK1234A"],
+      "isa_category": "TK",
+      "enabled": true
+    },
+    "analyzer": {
+      "regex": "^\\d+-A[A-Z]*\\d+-\\d+$",
+      "description": "Analyzer",
+      "category": "Instrument",
+      "examples": ["100-AE101-1", "200-AT202-2"],
+      "isa_category": "A",
+      "enabled": true
+    },
+    "burner": {
+      "regex": "^\\d+-B[A-Z]*\\d+-\\d+$",
+      "description": "Burner",
+      "category": "Instrument",
+      "examples": ["100-BE101-1", "200-BT202-2"],
+      "isa_category": "B",
+      "enabled": true
+    },
+    "control_valve": {
+      "regex": "^\\d+-C[A-Z]*\\d+-\\d+$",
+      "description": "Control Valve",
+      "category": "Instrument",
+      "examples": ["100-CV101-1", "200-FCV202-2"],
+      "isa_category": "C",
+      "enabled": true
+    },
+    "damper_louver": {
+      "regex": "^\\d+-D[A-Z]*\\d+-\\d+$",
+      "description": "Damper / Louver",
+      "category": "Instrument",
+      "examples": ["100-DE101-1", "200-DT202-2"],
+      "isa_category": "D",
+      "enabled": true
+    },
+    "sensor": {
+      "regex": "^\\d+-E[A-Z]*\\d+-\\d+$",
+      "description": "Sensor",
+      "category": "Instrument",
+      "examples": ["100-LE101-1", "200-TE202-2"],
+      "isa_category": "E",
+      "enabled": true
+    },
+    "flow": {
+      "regex": "^\\d+-F[A-Z]*\\d+-\\d+$",
+      "description": "Flow",
+      "category": "Instrument",
+      "examples": ["100-FE101-1", "200-FT202-2"],
+      "isa_category": "F",
+      "enabled": true
+    },
+    "gauge": {
+      "regex": "^\\d+-G[A-Z]*\\d+-\\d+$",
+      "description": "Gauge",
+      "category": "Instrument",
+      "examples": ["100-PG101-1", "200-TG202-2"],
+      "isa_category": "G",
+      "enabled": true
+    },
+    "hand": {
+      "regex": "^\\d+-H[A-Z]*\\d+-\\d+$",
+      "description": "Hand",
+      "category": "Instrument",
+      "examples": ["100-HC101-1", "200-HS202-2"],
+      "isa_category": "H",
+      "enabled": true
+    },
+    "current": {
+      "regex": "^\\d+-I[A-Z]*\\d+-\\d+$",
+      "description": "Current",
+      "category": "Instrument",
+      "examples": ["100-IE101-1", "200-IT202-2"],
+      "isa_category": "I",
+      "enabled": true
+    },
+    "power": {
+      "regex": "^\\d+-J[A-Z]*\\d+-\\d+$",
+      "description": "Power",
+      "category": "Instrument",
+      "examples": ["100-JE101-1", "200-JT202-2"],
+      "isa_category": "J",
+      "enabled": true
+    },
+    "time": {
+      "regex": "^\\d+-K[A-Z]*\\d+-\\d+$",
+      "description": "Time",
+      "category": "Instrument",
+      "examples": ["100-KC101-1", "200-KT202-2"],
+      "isa_category": "K",
+      "enabled": true
+    },
+    "level": {
+      "regex": "^\\d+-L[A-Z]*\\d+-\\d+$",
+      "description": "Level",
+      "category": "Instrument",
+      "examples": ["100-LE101-1", "200-LT202-2"],
+      "isa_category": "L",
+      "enabled": true
+    },
+    "moisture": {
+      "regex": "^\\d+-M[A-Z]*\\d+-\\d+$",
+      "description": "Moisture",
+      "category": "Instrument",
+      "examples": ["100-ME101-1", "200-MT202-2"],
+      "isa_category": "M",
+      "enabled": true
+    },
+    "orifice": {
+      "regex": "^\\d+-O[A-Z]*\\d+-\\d+$",
+      "description": "Orifice",
+      "category": "Instrument",
+      "examples": ["100-FO101-1", "200-PO202-2"],
+      "isa_category": "O",
+      "enabled": true
+    },
+    "pressure": {
+      "regex": "^\\d+-P[A-Z]*\\d+-\\d+$",
+      "description": "Pressure",
+      "category": "Instrument",
+      "examples": ["100-PE101-1", "200-PT202-2"],
+      "isa_category": "P",
+      "enabled": true
+    },
+    "quantity": {
+      "regex": "^\\d+-Q[A-Z]*\\d+-\\d+$",
+      "description": "Quantity",
+      "category": "Instrument",
+      "examples": ["100-QE101-1", "200-QT202-2"],
+      "isa_category": "Q",
+      "enabled": true
+    },
+    "radiation": {
+      "regex": "^\\d+-R[A-Z]*\\d+-\\d+$",
+      "description": "Radiation",
+      "category": "Instrument",
+      "examples": ["100-RE101-1", "200-RT202-2"],
+      "isa_category": "R",
+      "enabled": true
+    },
+    "speed": {
+      "regex": "^\\d+-S[A-Z]*\\d+-\\d+$",
+      "description": "Speed",
+      "category": "Instrument",
+      "examples": ["100-SE101-1", "200-ST202-2"],
+      "isa_category": "S",
+      "enabled": true
+    },
+    "temperature": {
+      "regex": "^\\d+-T[A-Z]*\\d+-\\d+$",
+      "description": "Temperature",
+      "category": "Instrument",
+      "examples": ["100-TE101-1", "200-TT202-2"],
+      "isa_category": "T",
+      "enabled": true
+    },
+    "multivariable": {
+      "regex": "^\\d+-U[A-Z]*\\d+-\\d+$",
+      "description": "Multivariable",
+      "category": "Instrument",
+      "examples": ["100-UE101-1", "200-UT202-2"],
+      "isa_category": "U",
+      "enabled": true
+    },
+    "vibration": {
+      "regex": "^\\d+-V[A-Z]*\\d+-\\d+$",
+      "description": "Vibration",
+      "category": "Instrument",
+      "examples": ["100-VE101-1", "200-VT202-2"],
+      "isa_category": "V",
+      "enabled": true
+    },
+    "well": {
+      "regex": "^\\d+-W[A-Z]*\\d+-\\d+$",
+      "description": "Well",
+      "category": "Instrument",
+      "examples": ["100-TW101-1", "200-TW202-2"],
+      "isa_category": "W",
+      "enabled": true
+    },
+    "building": {
+        "regex": "^\\d{2,3}\\BLD-[A-Z]{2}\\d{2}$",
+        "description": "Building",
+        "category": "Building",
+        "examples": ["BLD-AB01", "BLD-CD12"],
+        "isa_category": "BLDG",
+        "enabled": true
+    },
+    "room": {
+        "regex": "^ROOM-[A-Z]{2}\\d{2}$",
+        "description": "Room",
+        "category": "Building",
+        "examples": ["ROOM-AB01", "ROOM-CD12"],
+        "isa_category": "ROOM",
+        "enabled": true
+    },
+    "area": {
+        "regex": "^AREA-\\d{2}$",
+        "description": "Area",
+        "category": "Building",
+        "examples": ["AREA-01", "AREA-12"],
+        "isa_category": "AREA",
+        "enabled": true
+    },
+    "facility": {
+        "regex": "^FAC-[A-Z]{2}\\d{2}$",
+        "description": "Facility",
+        "category": "Building",
+        "examples": ["FAC-AB01", "FAC-CD12"],
+        "isa_category": "FAC",
+        "enabled": true
+    },
+    "floor": {
+        "regex": "^FLR-\\d{2}$",
+        "description": "Floor",
+        "category": "Building",
+        "examples": ["FLR-01", "FLR-12"],
+        "isa_category": "FLR",
+        "enabled": true
+    },
+    "yard": {
+        "regex": "^YD-[A-Z]{2}\\d{2}$",
+        "description": "Yard",
+        "category": "Building",
+        "examples": ["YD-AB01", "YD-CD12"],
+        "isa_category": "YD",
+        "enabled": true
+    }
+  }
+}
