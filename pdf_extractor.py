@@ -12,6 +12,7 @@ import gc
 import os
 import time
 import psutil
+import sqlite3
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -424,7 +425,8 @@ class PDFDataExtractor:
         max_memory_mb: int = 1024,
         extraction_timeout: int = 300,
         output_directory: str = "output",
-        pattern_manager: Optional[RegexPatternManager] = None
+        pattern_manager: Optional[RegexPatternManager] = None,
+        db_filename: str = "extraction_results.db" 
     ):
         self.chunk_size = chunk_size
         self.max_memory_mb = max_memory_mb
@@ -440,7 +442,95 @@ class PDFDataExtractor:
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
+
+        # Logica de DB
+        self.output_directory = Path(output_directory)
+        self.output_directory.mkdir(exist_ok=True)
+        self.db_path = self.output_directory / db_filename
+        self.db_table_name = "extracted_tags"
         
+        # Definir las columnas una sola vez para mantener consistencia entre CSV y DB
+        self.fieldnames = [
+            'documento_origen', 'area', 'tag_capturado', 'tag_formateado', 'tag_base', 'sufijo_equipo',
+            'clasificacion_level_1', 'clasificacion_level_2', 'tag_code', 'pagina_encontrada',
+            'contexto_linea', 'regex_captura', 'posicion_inicio', 'posicion_fin']
+
+# --- INICIO DE LAS NUEVAS FUNCIONES PARA SQLITE ---
+
+    def initialize_database(self):
+        """
+        Crea el archivo de base de datos SQLite y la tabla 'extracted_tags' si no existen.
+        Define la llave primaria compuesta. Se debe llamar una vez por ejecución.
+        """
+        try:
+            self.logger.info(f"Inicializando la base de datos en: {self.db_path}")
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Crear la tabla con los tipos de datos adecuados y la llave primaria compuesta
+            # Usamos "TEXT" para la mayoría de los campos para máxima flexibilidad.
+            # La llave primaria en (tag_formateado, documento_origen) previene duplicados.
+            create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.db_table_name} (
+                documento_origen TEXT,
+                area TEXT,
+                tag_capturado TEXT,
+                tag_formateado TEXT NOT NULL,
+                tag_base TEXT,
+                sufijo_equipo TEXT,
+                clasificacion_level_1 TEXT,
+                clasificacion_level_2 TEXT,
+                tag_code TEXT,
+                pagina_encontrada INTEGER,
+                contexto_linea TEXT,
+                regex_captura TEXT,
+                posicion_inicio INTEGER,
+                posicion_fin INTEGER,
+                PRIMARY KEY ("tag_formateado", "documento_origen")
+            );
+            """
+            cursor.execute(create_table_sql)
+            conn.commit()
+            conn.close()
+            self.logger.info(f"La tabla '{self.db_table_name}' está lista.")
+        except Exception as e:
+            self.logger.error(f"Error al inicializar la base de datos: {e}")
+            raise
+
+    def save_results_to_sqlite(self, results: List[Dict[str, Any]]):
+        """
+        Guarda una lista de resultados de tags en la base de datos SQLite.
+        Utiliza 'INSERT OR REPLACE' para manejar duplicados, actualizando el registro si ya existe.
+        """
+        if not results:
+            return
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Crear el statement de inserción parametrizado para evitar inyección SQL
+            # Usamos INSERT OR REPLACE para que si un tag de un documento ya existe, se actualice.
+            # Esto es útil si se re-procesa un archivo.
+            columns = ', '.join(self.fieldnames)
+            placeholders = ', '.join(['?'] * len(self.fieldnames))
+            sql = f"INSERT OR REPLACE INTO {self.db_table_name} ({columns}) VALUES ({placeholders})"
+            
+            # Preparar los datos como una lista de tuplas en el orden correcto
+            data_to_insert = []
+            for row_dict in results:
+                # Se asegura de que cada valor esté en el orden correcto de self.fieldnames
+                row_tuple = tuple(row_dict.get(field) for field in self.fieldnames)
+                data_to_insert.append(row_tuple)
+
+            cursor.executemany(sql, data_to_insert)
+            conn.commit()
+            conn.close()
+            self.logger.info(f"Guardados {len(results)} registros en la base de datos SQLite.")
+
+        except Exception as e:
+            self.logger.error(f"Error al guardar resultados en SQLite: {e}")
+            # No relanzamos el error para no detener el procesamiento de los demás archivos        
     
     def extract_from_single_pdf(self, pdf_path: Union[str, Path]) -> ExtractionResult:
         """

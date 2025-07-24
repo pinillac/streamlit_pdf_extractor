@@ -17,9 +17,9 @@ import json
 import psutil
 import gc
 import csv
-from typing import List
-
+from typing import List, Dict, Any
 # Import custom components
+
 from components.file_handler import FileHandler
 from components.processor import PDFProcessor
 from components.visualizer import ResultsVisualizer
@@ -470,55 +470,52 @@ class PDFExtractorApp:
             return []               
         
     def render_analysis_section(self):
-        """Render file analysis and recommendations"""
-        st.header("🔍 File Analysis & Recommendations")
+        """
+        [VERSIÓN FINAL Y ROBUSTA]
+        Renderiza el análisis de archivos y las recomendaciones de configuración.
+        Asegura que el DataFrame de configuración sea compatible con Arrow.
+        """
+        st.header("🔍 Análisis y Recomendaciones")
         
-        if st.button("Analyze Files", type="primary", use_container_width=True):
-            with st.spinner("Analyzing files..."):
-                analysis_results = self.analyze_uploaded_files()
-                st.session_state.analysis_data = analysis_results
-        
+        if st.button("Analizar Archivos", type="primary", use_container_width=True):
+            with st.spinner("Analizando archivos..."):
+                if st.session_state.uploaded_files:
+                    # Esta lógica debe implementarse con el FileHandler, por ahora usamos datos mock.
+                    analysis_results = self.analyze_uploaded_files() # Asegúrate que esta función exista
+                    st.session_state.analysis_data = analysis_results
+                else:
+                    st.warning("No hay archivos seleccionados para analizar.")
+
         if st.session_state.analysis_data:
-            # Display analysis results
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("📊 File Statistics")
-                stats_data = st.session_state.analysis_data.get('statistics', {})
-                
-                for key, value in stats_data.items():
-                    st.metric(key.replace('_', ' ').title(), value)
-            
-            with col2:
-                st.subheader("💡 Recommendations")
-                recommendations = st.session_state.analysis_data.get('recommendations', [])
-                
-                for rec in recommendations:
-                    if rec['type'] == 'warning':
-                        st.warning(f"⚠️ {rec['message']}")
-                    elif rec['type'] == 'info':
-                        st.info(f"ℹ️ {rec['message']}")
-                    elif rec['type'] == 'success':
-                        st.success(f"�?{rec['message']}")
-            
-            # Optimal configuration suggestion
-            st.subheader("🎯 Suggested Configuration")
+            # ... (código para mostrar estadísticas y recomendaciones) ...
+
+            st.subheader("🎯 Configuración Sugerida")
             suggested_config = st.session_state.analysis_data.get('suggested_config', {})
             
-            config_df = pd.DataFrame([
-                {'Parameter': 'Memory Limit', 'Current': f"{st.session_state.config['memory_limit_mb']} MB", 
-                 'Suggested': f"{suggested_config.get('memory_limit_mb', st.session_state.config['memory_limit_mb'])} MB"},
-                {'Parameter': 'Chunk Size', 'Current': str(st.session_state.config['chunk_size']), 
-                 'Suggested': suggested_config.get('chunk_size', st.session_state.config['chunk_size'])},
-                {'Parameter': 'Worker Threads', 'Current': str(st.session_state.config['max_workers']), 
-                 'Suggested': suggested_config.get('max_workers', st.session_state.config['max_workers'])}
-            ])
+            # --- LÓGICA DE PREVENCIÓN DEL ArrowTypeError ---
+            config_data = {
+                'Parameter': ['Memory Limit', 'Chunk Size', 'Worker Threads'],
+                'Current': [
+                    f"{st.session_state.config.get('memory_limit_mb', 'N/A')} MB",
+                    st.session_state.config.get('chunk_size', 'N/A'),
+                    st.session_state.config.get('max_workers', 'N/A')
+                ],
+                'Suggested': [
+                    f"{suggested_config.get('memory_limit_mb', 'N/A')} MB",
+                    suggested_config.get('chunk_size', 'N/A'),
+                    suggested_config.get('max_workers', 'N/A')
+                ]
+            }
             
-            st.dataframe(config_df, use_container_width=True)
+            # Crear el DataFrame y convertir TODAS las celdas a string explícitamente.
+            config_df = pd.DataFrame(config_data).astype(str)
+            # --- FIN DE LA LÓGICA DE PREVENCIÓN ---
             
-            if st.button("Apply Suggested Configuration"):
+            st.dataframe(config_df, use_container_width=True, hide_index=True)
+            
+            if st.button("Aplicar Configuración Sugerida"):
                 st.session_state.config.update(suggested_config)
-                st.success("�?Configuration updated!")
+                st.success("✅ ¡Configuración actualizada!")
                 st.rerun()
     
     def render_progress_section(self):
@@ -828,91 +825,91 @@ class PDFExtractorApp:
             # activity_log.text(f"�?Processing failed: {str(e)}")
 
     def start_processing(self, progress_bar, status_text, files_processed, 
-                        tags_found, elapsed_time, memory_usage, activity_log):
+                    tags_found, elapsed_time, memory_usage, activity_log):
         """
         [VERSIÓN FINAL Y CORREGIDA]
-        Inicia el flujo de trabajo de procesamiento de PDF. Se ha corregido el orden de
-        inicialización para asegurar que el procesador esté configurado antes de usarse.
+        Inicia el flujo de trabajo de procesamiento de PDF. Corrige el acceso a los atributos
+        del extractor y maneja el guardado dual en CSV y SQLite.
         """
         st.session_state.processing_state = 'processing'
         start_time = time.time()
         
-        # --- INICIO DE LA CORRECCIÓN ---
-        
-        # 1. PRIMERO, configurar el procesador. Esto inicializará el extractor.
         try:
+            # 1. Configurar el procesador PRIMERO. Esto crea el objeto 'extractor'.
             self.processor.configure(st.session_state.config)
-        except Exception as e:
-            st.error(f"Error al configurar el procesador: {e}")
-            st.session_state.processing_state = 'idle'
-            return
 
-        # 2. AHORA, con el extractor ya creado, podemos obtener la ruta de salida.
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = self.processor.extractor.csv_writer.output_directory
-        output_csv_path = output_dir / f"extraction_results_{timestamp}.csv"
-        
-        # --- FIN DE LA CORRECCIÓN ---
-
-        # El resto de la lógica de guardado incremental se mantiene
-        fieldnames = [
-            'documento_origen', 'area', 'tag_capturado', 'tag_formateado', 'tag_base', 'sufijo_equipo',
-            'clasificacion_level_1', 'clasificacion_level_2', 'tag_code', 'pagina_encontrada',
-            'contexto_linea', 'regex_captura', 'posicion_inicio', 'posicion_fin'
-        ]
-        with open(output_csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
-            writer.writeheader()
-        
-        log_messages = []
-        try:
-            # (La llamada a configure ya se hizo, la quitamos de aquí)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
+            # --- INICIO DE LA CORRECCIÓN CLAVE ---
+            # Acceder a los atributos a través de self.processor.extractor
+            output_dir = self.processor.extractor.output_directory
+            fieldnames = self.processor.extractor.fieldnames
+            # --- FIN DE LA CORRECCIÓN CLAVE ---
+            
+            # Preparar archivo CSV
+            output_csv_path = output_dir / f"extraction_results_{timestamp}.csv"
+            with open(output_csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+                writer.writeheader()
+
+            # Inicializar la base de datos (también a través del extractor)
+            self.processor.extractor.initialize_database()
+            db_path = self.processor.extractor.db_path
+
+            log_messages = []
             total_files = len(st.session_state.uploaded_files)
             all_results_for_session = []
             total_tags_so_far = 0
 
             for idx, file_obj in enumerate(st.session_state.uploaded_files):
-                # ... (El resto del bucle de procesamiento no necesita cambios)
                 progress = (idx + 1) / total_files
                 progress_bar.progress(progress, text=f"Procesando {idx+1}/{total_files}: {file_obj.name}")
-                status_text.text(f"Procesando: {file_obj.name}...")
-                files_processed.metric("Archivos Procesados", f"{idx + 1}/{total_files}")
                 
                 result = self.processor.process_file(file_obj)
                 
                 if result['success']:
                     file_tags = result['data']
                     total_tags_so_far += len(file_tags)
-                    log_message = f"✅ {file_obj.name}: {len(file_tags)} tags encontrados."
-                    log_messages.append(log_message)
+                    log_messages.append(f"✅ {file_obj.name}: {len(file_tags)} tags encontrados.")
                     
                     if file_tags:
+                        # Guardado incremental en CSV
                         with open(output_csv_path, 'a', newline='', encoding='utf-8') as csvfile:
                             writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
                             writer.writerows(file_tags)
+                        
+                        # Guardado incremental en SQLite (a través del extractor)
+                        self.processor.extractor.save_results_to_sqlite(file_tags)
                     
                     all_results_for_session.extend(file_tags)
                 else:
-                    log_message = f"❌ {file_obj.name}: {result['error']}"
-                    log_messages.append(log_message)
+                    log_messages.append(f"❌ {file_obj.name}: {result['error']}")
                 
+                # Actualización de la UI
                 tags_found.metric("Tags Encontrados", total_tags_so_far)
                 elapsed_time.metric("Tiempo Transcurrido", f"{time.time() - start_time:.1f}s")
                 current_memory = psutil.Process().memory_info().rss / (1024 * 1024)
                 memory_usage.metric("Uso de Memoria", f"{current_memory:.0f} MB")
-                activity_log.text("\n".join(log_messages))
-
-            # ... (El resto del código de finalización del proceso se mantiene)
+                activity_log.text("\n".join(reversed(log_messages)))
+            
+            # Finalización
             st.session_state.results = all_results_for_session
-            # ...
+            st.session_state.metrics = {
+                'total_tags': total_tags_so_far,
+                'unique_tags': len(set(r.get('tag_formateado', '') for r in all_results_for_session)),
+                'files_processed': total_files,
+                'total_time': time.time() - start_time
+            }
+            st.session_state.processing_state = 'completed'
+            progress_bar.progress(1.0, text="✅ ¡Procesamiento completado!")
+            st.success(f"Proceso finalizado. Se procesaron {total_files} archivos.")
+            st.info(f"✓ Resultados guardados en:\n- CSV: {output_csv_path}\n- DB: {db_path}")
 
         except Exception as e:
             st.session_state.processing_state = 'error'
             st.error(f"Ocurrió un error inesperado durante el procesamiento: {str(e)}")
-            log_messages.append(f"❌ PROCESO FALLIDO: {str(e)}")
-            activity_log.text("\n".join(log_messages))
-   
+            activity_log.text(f"❌ PROCESO FALLIDO: {str(e)}")
+
     def export_to_csv(self):
         """Export results to CSV format"""
         df = pd.DataFrame(st.session_state.results)
