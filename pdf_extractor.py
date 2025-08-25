@@ -2,7 +2,7 @@
 """
 Enterprise-grade PDF Data Extractor for Technical Equipment Tag Recognition
 Author: Enterprise Development Team
-Version: 1.0.0
+Version: 2.3.0 (Enhanced with Advanced Disassembly and Filtering)
 Python: 3.8+
 """
 
@@ -13,15 +13,17 @@ import os
 import time
 import psutil
 import sqlite3
-from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Iterator, Protocol, Union
+from typing import Dict, List, Any, Optional, Iterator, Union
 from datetime import datetime
 import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import pymupdf  # PyMuPDF - highest performance PDF library
+import pymupdf
+
+# Importar PatternManager desde su ubicación correcta
+from utils.pattern_manager import PatternManager
 
 # Configure logging
 logging.basicConfig(
@@ -33,9 +35,10 @@ logging.basicConfig(
     ]
 )
 
+# --- Clases de Excepciones y Datos (Sin Cambios) ---
+
 class PDFExtractionError(Exception):
     """Base exception for PDF extraction operations."""
-    
     def __init__(self, message: str, error_code: str = None, context: Dict[str, Any] = None):
         self.message = message
         self.error_code = error_code or "PDF_EXTRACTION_ERROR"
@@ -44,20 +47,11 @@ class PDFExtractionError(Exception):
 
 class PDFFileNotFoundError(PDFExtractionError):
     """Raised when PDF file is not found."""
-    
     def __init__(self, file_path: Path):
-        super().__init__(
-            f"PDF file not found: {file_path}",
-            error_code="PDF_FILE_NOT_FOUND",
-            context={"file_path": str(file_path)}
-        )
+        super().__init__(f"PDF file not found: {file_path}", "PDF_FILE_NOT_FOUND", {"file_path": str(file_path)})
 
 class PDFCorruptedError(PDFExtractionError):
     """Raised when PDF file is corrupted or unreadable."""
-    pass
-
-class PDFExtractionTimeoutError(PDFExtractionError):
-    """Raised when extraction exceeds timeout limit."""
     pass
 
 @dataclass(frozen=True)
@@ -82,413 +76,251 @@ class ProcessingMetrics:
     error_count: int
     start_time: datetime = field(default_factory=datetime.now)
 
-class RegexPatternManager:
-    """Manages and validates regex patterns for equipment identification."""
-    
-    # Optimized regex patterns based on research findings
-    EQUIPMENT_PATTERNS = {
-        'bomba': {
-            'pattern': re.compile(r'\b\d{3}P\d{4}(?:[A-Z](?:/[A-Z])?)?\b'),
-            'description': 'Pump equipment (optimized from original pattern)'
-        },
-        'horno': {
-            'pattern': re.compile(r'\b\d{3}F\d{4}(?:[A-Z](?:/[A-Z])?)?\b'),
-            'description': 'Furnace equipment (optimized from original pattern)'
-        },
-        'intercambiador': {
-            'pattern': re.compile(r'\b\d{3}E\d{4}[A-Z]?\b'),
-            'description': 'Heat exchanger equipment'
-        },
-        'recipiente': {
-            'pattern': re.compile(r'\b\d{3}V\d{4}[A-Z]?\b'),
-            'description': 'Vessel equipment'
-        },
-        'compresor': {
-            'pattern': re.compile(r'\b\d{3}C\d{4}[A-Z]?\b'),
-            'description': 'Compressor equipment'
-        },
-        'instrumento': {
-            'pattern': re.compile(r'\b[A-Z]{2,4}-\d{3,5}[A-Z]?\b'),
-            'description': 'Instrument tags (ISA standard)'
-        },
-        'tuberia': {
-            'pattern': re.compile(r'\b\d{1,2}"-[A-Z]{2,4}-\d{4,6}-[A-Z0-9-]{1,20}\b'),
-            'description': 'Piping system (optimized to prevent backtracking)'
-        }
-    }
-    
-
-    
-    @classmethod
-    def get_test_strings(cls, pattern_name: str) -> List[str]:
-        """Get test strings for pattern validation."""
-        test_data = {
-            'bomba': ['123P4567', '456P7890A', '789P0123B/C', '001P2345X'],
-            'horno': ['100F2500', '205F3678A', '304F5555B/D', '999F1111X/Z'],
-            'intercambiador': ['123E4567', '456E7890A', '001E2345Z', '999E8888B'],
-            'recipiente': ['123V4567', '789V0123A', '555V9999Z'],
-            'compresor': ['123C4567', '456C7890B', '999C1111A'],
-            'instrumento': ['PT-123', 'FIC-12345A', 'TRC-4567B', 'LAHH-999', 'AI-12345'],
-            'tuberia': ['6"-PT-1234-STEAM', '12"-FW-123456-HOT-WATER', '8"-CW-5678-COOLING']
-        }
-        return test_data.get(pattern_name, [])
+# --- Clases de Utilidad (Sin Cambios) ---
 
 class MemoryMonitor:
     """Memory usage monitoring and management."""
-    
     def __init__(self, max_memory_mb: int = 1024):
         self.max_memory_mb = max_memory_mb
         self.process = psutil.Process()
         self.peak_memory = 0
     
     def get_current_memory_mb(self) -> float:
-        """Get current memory usage in MB."""
         return self.process.memory_info().rss / 1024 / 1024
     
     def check_memory_threshold(self) -> bool:
-        """Check if memory usage exceeds threshold."""
         current_memory = self.get_current_memory_mb()
         self.peak_memory = max(self.peak_memory, current_memory)
-        
         if current_memory > self.max_memory_mb:
-            gc.collect()  # Force garbage collection
-            current_memory = self.get_current_memory_mb()
-            
-            if current_memory > self.max_memory_mb:
+            gc.collect()
+            if self.get_current_memory_mb() > self.max_memory_mb:
                 raise MemoryError(f"Memory usage {current_memory:.1f}MB exceeds limit {self.max_memory_mb}MB")
-        
-        return current_memory > self.max_memory_mb * 0.8  # Warning threshold
+        return current_memory > self.max_memory_mb * 0.8
 
 class PDFReader:
     """Optimized PDF reading implementation using PyMuPDF."""
-    
     def __init__(self, chunk_size: int = 10):
         self.chunk_size = chunk_size
         self.logger = logging.getLogger(__name__)
     
     @contextmanager
     def open_pdf(self, pdf_path: Path):
-        """Context manager for PDF document handling."""
+        doc = None
         try:
             doc = pymupdf.open(str(pdf_path))
-            
             if doc.needs_pass:
-                doc.close()
-                raise PDFExtractionError(
-                    f"PDF is password protected: {pdf_path}",
-                    error_code="PASSWORD_PROTECTED"
-                )
-            
+                raise PDFExtractionError(f"PDF is password protected: {pdf_path}", "PASSWORD_PROTECTED")
             yield doc
-            
-        except pymupdf.FileNotFoundError:
+        except (pymupdf.FileNotFoundError, RuntimeError):
             raise PDFFileNotFoundError(pdf_path)
-        except pymupdf.FileDataError:
+        except Exception:
             raise PDFCorruptedError(f"PDF file appears to be corrupted: {pdf_path}")
         finally:
-            if 'doc' in locals():
+            if doc:
                 doc.close()
             gc.collect()
     
     def extract_text_chunked(self, pdf_path: Path) -> Iterator[tuple[str, int]]:
-        """Extract text in chunks for memory efficiency."""
         with self.open_pdf(pdf_path) as doc:
-            total_pages = doc.page_count
-            
-            for start_page in range(0, total_pages, self.chunk_size):
-                end_page = min(start_page + self.chunk_size, total_pages)
-                chunk_text_parts = []
-                
-                for page_num in range(start_page, end_page):
-                    try:
-                        page = doc[page_num]
-                        text = page.get_text()
-                        
-                        if text.strip():  # Skip empty pages
-                            chunk_text_parts.append((text, page_num + 1))
-                    
-                    except Exception as e:
-                        self.logger.warning(f"Error reading page {page_num + 1}: {e}")
-                        continue
-                
-                # Yield chunk results
-                for text, page_num in chunk_text_parts:
-                    yield text, page_num
-                
-                # Cleanup after each chunk
-                del chunk_text_parts
-                gc.collect()
+            for page_num in range(doc.page_count):
+                try:
+                    yield doc[page_num].get_text(), page_num + 1
+                except Exception as e:
+                    self.logger.warning(f"Error reading page {page_num + 1}: {e}")
+
+# --- Motor de Lógica de Extracción (Lógica Principal Actualizada) ---
 
 class DataExtractor:
-    """Core data extraction logic using regex patterns."""
-    
-    def __init__(self, pattern_manager: RegexPatternManager):
+    """Core data extraction logic with advanced post-processing."""
+    def __init__(self, pattern_manager: PatternManager):
         self.pattern_manager = pattern_manager
         self.logger = logging.getLogger(__name__)
-    
-    def _disaggregate_and_format_tag(self, tag: str) -> List[str]:
-        """
-        Método de ayuda para desglosar y formatear tags complejos.
-        Maneja sufijos duales/múltiples separados por slashes, como 'A/B' o 'A/B/C'.
-        El formato de entrada esperado es: 'BASE_CON_SUFIJO_A/SUFIJO_B/SUFIJO_C'.
-        Ejemplo: 123-P-0101A/B/C
-        """
-        # --- LÓGICA DE DESGLOSE ACTUALIZADA PARA MÚLTIPLES SLASHES ---
+
+    def _normalize_tag(self, tag: str, level1: str) -> str:
+        if level1 == 'Instrument' and '-' in tag:
+            return tag.replace('-', '')
+        if ' ' in tag:
+            return re.sub(r'(\d{3})\s+([A-Z]{1,4})', r'\1\2', tag)
+        return tag
+
+    def _disaggregate_tag(self, tag: str) -> List[str]:
         if '/' in tag:
             parts = tag.split('/')
-            # La primera parte contiene la base y el primer sufijo, ej: '123-P-0101A'
             first_part = parts[0]
-            
-            # Extraer la base común y el primer sufijo
             base_match = re.match(r'^(.*[0-9])([A-Z])$', first_part)
-            
             if base_match:
-                tag_base = base_match.group(1) # ej: '123-P-0101'
-                first_suffix = base_match.group(2) # ej: 'A'
-                
-                # Crear la lista de tags desglosados
-                disaggregated_tags = [f"{tag_base}{first_suffix}"]
-                
-                # Añadir los tags para los sufijos restantes
+                tag_base, first_suffix = base_match.groups()
+                disaggregated = [f"{tag_base}{first_suffix}"]
                 for suffix in parts[1:]:
                     if len(suffix) == 1 and suffix.isalpha():
-                        disaggregated_tags.append(f"{tag_base}{suffix}")
-                
-                return disaggregated_tags
-
-        # --- LÓGICA ANTERIOR PARA '\' (se mantiene por si acaso) ---
-        # Si no se encontró '/', se puede verificar por '\' o cualquier otra lógica futura.
-        # Por ahora, nos centramos en el requerimiento del '/'
-        if '\\' in tag:
-            # (Puedes mantener o adaptar la lógica anterior para '\' si aún es necesaria)
-            pass
-
-        # Si no es un tag compuesto, simplemente se devuelve en una lista de un elemento.
+                        disaggregated.append(f"{tag_base}{suffix}")
+                return disaggregated
         return [tag]
 
+    def _create_base_tag_info(self, match_details: Dict, page_num: int, doc_path: Path) -> Dict:
+        return {
+            'documento_origen': doc_path.name,
+            'pagina_encontrada': page_num,
+            'tag_capturado': match_details['tag_capturado'],
+            'clasificacion_level_1': match_details.get('clasificacion_level_1'),
+            'clasificacion_level_2': match_details.get('clasificacion_level_2'),
+            'tag_code': match_details.get('tag_code'),
+            'regex_captura': self.pattern_manager.taxonomy_data.get(match_details['pattern_name'], {}).get('Regex Pattern', 'N/A'),
+            'contexto_linea': match_details.get('context'),
+            'posicion_inicio': match_details.get('start'),
+            'posicion_fin': match_details.get('end'),
+        }
+
     def extract_tags_from_text(self, text: str, page_number: int, document_path: Path) -> List[Dict[str, Any]]:
-        """
-        [VERSIÓN FINAL]
-        Extrae y procesa tags de un texto. Incluye:
-        1. Desglose de tags compuestos con múltiples slashes (A/B/C).
-        2. Extracción del código de área.
-        3. Adjuntar la taxonomía completa del CSV (Level 1, Level 2, Tag Code).
-        4. Incluir el patrón regex que realizó la captura para debugging.
-        """
-        # --- LÓGICA EXISTENTE (desde la implementación de la taxonomía) ---
-        all_matches_details = self.pattern_manager.find_all_matches(text)
-        
+        all_matches = self.pattern_manager.find_all_matches(text)
         extracted_data = []
-        
-        for match_details in all_matches_details:
-            original_tag_text = match_details['tag_capturado']
-            # --- NUEVA LÓGICA: OBTENER EL REGEX USADO ---
-            # Asumimos que el PatternManager ahora devuelve el regex en los detalles
-            # (Se necesita una pequeña modificación en PatternManager que se muestra más abajo)
-            regex_used = self.pattern_manager.taxonomy_data.get(match_details['pattern_name'], {}).get('regex', 'N/A')
+        doc_name_without_ext = document_path.stem
 
-            # Clasificación del tag según la taxonomía
-            level1_class = match_details.get('clasificacion_level_1')
+        for match in all_matches:
+            if match['clasificacion_level_1'] == 'Document' and doc_name_without_ext in match['tag_capturado']:
+                continue
 
-            # Desglosar tags si es necesario (ej: '...A/B' -> ['...A', '...B'])
-            formatted_tags = self._disaggregate_and_format_tag(original_tag_text)
-
-            # Iterar sobre cada tag desglosado para crear una fila de datos para cada uno
-            for tag_to_format in formatted_tags:
-
-                # --- INICIO DE LA NUEVA LÓGICA DE NORMALIZACIÓN ---
+            disaggregated_tags = self._disaggregate_tag(match['tag_capturado'])
+            
+            for tag_instance in disaggregated_tags:
+                info = self._create_base_tag_info(match, page_number, document_path)
+                info['tag_formateado'] = self._normalize_tag(tag_instance, info['clasificacion_level_1'])
                 
-                # Por defecto, el tag formateado es el tag procesado.
-                final_formatted_tag = tag_to_format
+                # --- INICIO DE LA CORRECCIÓN: CONSOLIDACIÓN DE DATOS ---
                 
-                # Regla de normalización: Si el tag es de clase 'Instrument' y contiene guiones,
-                # se los quitamos para el campo 'tag_formateado'.
-                # Ejemplo: '051-UXA-0012' -> '051UXA0012'
-                if level1_class == 'Instrument' and '-' in tag_to_format:
-                    final_formatted_tag = tag_to_format.replace('-', '')
+                # Regla general para 'area': se extrae de los 3 primeros dígitos.
+                info['area'] = re.match(r'^(\d{3})', tag_instance.replace(" ", "")).group(1) if re.match(r'^(\d{3})', tag_instance.replace(" ", "")) else None
 
-                # --- FIN DE LA NUEVA LÓGICA DE NORMALIZACIÓN ---
-                
-                # Extraer el Área (los 3 primeros dígitos)
-                area_code = None
-                area_match = re.match(r'^(\d{3})', tag_to_format)
-                if area_match:
-                    area_code = area_match.group(1)
+                match_obj = match.get('match_object')
+                if not match_obj:
+                    extracted_data.append(info)
+                    continue
 
-                # Extraer sufijo y base del tag ya formateado
-                tag_base = tag_to_format
-                sufijo = None
-                # La lógica del sufijo busca la última letra que no esté precedida por otra letra
-                match_sufijo = re.search(r'([^A-Z])([A-Z])$', final_formatted_tag)
-                if match_sufijo:
-                    sufijo = match_sufijo.group(2)
-                    tag_base = final_formatted_tag[:-1]
+                # Lógica de desglose específica por tipo de tag
+                level1_class = info['clasificacion_level_1']
                 
-                # --- LÓGICA EXISTENTE MEJORADA CON LOS NUEVOS CAMPOS ---
-                tag_info = {
-                    'documento_origen': str(document_path.name),
-                    'area': area_code,
-                    'tag_capturado': original_tag_text,
-                    'tag_formateado': final_formatted_tag,
-                    'tag_base': tag_base,
-                    'sufijo_equipo': sufijo,
-                    'clasificacion_level_1': match_details.get('clasificacion_level_1'),
-                    'clasificacion_level_2': match_details.get('clasificacion_level_2'),
-                    'tag_code': match_details.get('tag_code'),
-                    'pagina_encontrada': page_number,
-                    'contexto_linea': match_details.get('context'),
-                    'regex_captura': regex_used,  # <-- CAMPO PARA DEBUGGING
-                    'posicion_inicio': match_details.get('start'),
-                    'posicion_fin': match_details.get('end'),
-                }
+                if level1_class == 'ElectricalEquipment':
+                    groups = match_obj.groups()
+                    info['tag_code'] = groups[0] if groups else ''
+                    info['tag_base'] = groups[1] if len(groups) > 1 else '' # Sequence Number es la base
+                    info['sufijo_equipo'] = "".join(groups[2:]) if len(groups) > 2 else ''
                 
-                extracted_data.append(tag_info)
+                elif level1_class == 'Piping':
+                    try:
+                        # La 'area' ya fue capturada arriba. No necesitamos 'piping_unit'.
+                        info['piping_npd'] = match_obj.group('NPD')
+                        info['piping_fluid_code'] = match_obj.group('Fluid_Code')
+                        info['piping_sequence'] = match_obj.group('Sequence')
+                        info['piping_class'] = match_obj.group('Piping_Class')
+                        info['piping_insulation'] = match_obj.group('Insulation') or ''
+                    except IndexError:
+                        self.logger.warning(f"Patrón de Piping sin grupos nombrados para '{match['tag_capturado']}'.")
+                else:
+                    # Lógica general para 'tag_base' y 'sufijo_equipo' para otros tipos
+                    tag_base = info['tag_formateado']
+                    sufijo = None
+                    sufijo_match = re.search(r'([A-Z])$', tag_base)
+                    if sufijo_match and (len(tag_base) < 5 or not tag_base[-2].isalpha()):
+                        sufijo = sufijo_match.group(1)
+                        tag_base = tag_base[:-1]
+                    info['tag_base'] = tag_base
+                    info['sufijo_equipo'] = sufijo
 
+                # --- FIN DE LA CORRECCIÓN ---
+                
+                extracted_data.append(info)
         return extracted_data
 
+# --- Gestor de Salida a CSV ---
+# --- Gestor de Salida a CSV (Simplificado) ---
+
 class CSVWriter:
-    """Optimized CSV output handling."""
-    
-    def __init__(self, output_directory: Path = Path("output")):
+    def __init__(self, output_directory: Path):
         self.output_directory = output_directory
-        self.output_directory.mkdir(exist_ok=True)
         self.logger = logging.getLogger(__name__)
 
-    def write_results(self, results: List[Dict[str, Any]], output_filename: str) -> Path:
-        """
-        [VERSIÓN FINAL]
-        Escribe los resultados de la extracción en un archivo CSV, incluyendo
-        todas las columnas de taxonomía, formato y debugging.
-        """
+    def write_results(self, results: List[Dict[str, Any]], output_filename: str, fieldnames: List[str]) -> Path:
         output_path = self.output_directory / output_filename
-        
-        # --- LÓGICA EXISTENTE MEJORADA ---
-        # Definimos el orden final y completo de las columnas en el CSV de salida.
-        fieldnames = [
-            'documento_origen',
-            'area',
-            'tag_capturado',
-            'tag_formateado',
-            'tag_base',
-            'sufijo_equipo',
-            'clasificacion_level_1',
-            'clasificacion_level_2',
-            'tag_code',
-            'pagina_encontrada',
-            'contexto_linea',
-            'regex_captura',  # <-- COLUMNA AÑADIDA
-            'posicion_inicio',
-            'posicion_fin'
-        ]
-
-        if not results:
-            self.logger.warning("No hay datos para escribir en el CSV. Se creará un archivo vacío con cabeceras.")
-            with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-            return output_path
-        
         try:
             with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
                 writer.writeheader()
-                
-                # La lógica de escritura por lotes se mantiene igual
-                batch_size = 1000
-                for i in range(0, len(results), batch_size):
-                    batch = results[i:i + batch_size]
-                    writer.writerows(batch)
-                    csvfile.flush()
-            
-            self.logger.info(f"Se escribieron {len(results)} registros exitosamente en {output_path}")
+                writer.writerows(results)
+            self.logger.info(f"Se escribieron {len(results)} registros en {output_path}")
             return output_path
-            
         except Exception as e:
             self.logger.error(f"Error escribiendo el archivo CSV: {e}")
             raise
 
+# --- Clase Principal del Extractor (Integrador de Componentes) ---
+
 class PDFDataExtractor:
-    """
-    Enterprise-grade PDF Data Extractor for technical equipment tag recognition.
-    
-    Features:
-    - Memory-efficient chunk processing for large PDFs (10MB-500MB)
-    - Optimized regex patterns for equipment identification
-    - Comprehensive error handling and logging
-    - Performance metrics collection
-    - Multi-processing support for batch operations
-    """
-    
     def __init__(
         self,
         chunk_size: int = 10,
         max_memory_mb: int = 1024,
         extraction_timeout: int = 300,
         output_directory: str = "output",
-        pattern_manager: Optional[RegexPatternManager] = None,
-        db_filename: str = "extraction_results.db" 
+        pattern_manager: Optional[PatternManager] = None
     ):
         self.chunk_size = chunk_size
         self.max_memory_mb = max_memory_mb
         self.extraction_timeout = extraction_timeout
-        
-        # Initialize components
-        #self.pattern_manager = RegexPatternManager()
-        self.pattern_manager = pattern_manager if pattern_manager is not None else RegexPatternManager()
-        self.pdf_reader = PDFReader(chunk_size=chunk_size)
-        self.data_extractor = DataExtractor(self.pattern_manager)
-        self.csv_writer = CSVWriter(Path(output_directory))
-        self.memory_monitor = MemoryMonitor(max_memory_mb)
-        
-        # Setup logging
-        self.logger = logging.getLogger(__name__)
-
-        # Logica de DB
         self.output_directory = Path(output_directory)
         self.output_directory.mkdir(exist_ok=True)
+        
+        self.pattern_manager = pattern_manager if pattern_manager is not None else PatternManager()
+        self.pdf_reader = PDFReader(chunk_size=chunk_size)
+        self.data_extractor = DataExtractor(self.pattern_manager)
+        self.memory_monitor = MemoryMonitor(max_memory_mb)
+        self.logger = logging.getLogger(__name__)
+
+        # Centralización de la definición de columnas de salida
+        self.fieldnames = [
+            'documento_origen',
+            'tag_capturado',
+            'tag_formateado',
+            'tag_base',
+            'area',
+            'sufijo_equipo',
+            'clasificacion_level_1',
+            'clasificacion_level_2',
+            'tag_code',
+            'piping_npd',
+            'piping_fluid_code',
+            'piping_sequence',
+            'piping_class',
+            'piping_insulation',
+            'pagina_encontrada',
+            'contexto_linea',
+            'posicion_inicio',
+            'posicion_fin',
+            'regex_captura'
+        ]
+        
+        self.csv_writer = CSVWriter(self.output_directory)
+        
+        # Configuración de la base de datos
+        db_filename = "extraction_results.db"
         self.db_path = self.output_directory / db_filename
         self.db_table_name = "extracted_tags"
         
-        # Definir las columnas una sola vez para mantener consistencia entre CSV y DB
-        self.fieldnames = [
-            'documento_origen', 'area', 'tag_capturado', 'tag_formateado', 'tag_base', 'sufijo_equipo',
-            'clasificacion_level_1', 'clasificacion_level_2', 'tag_code', 'pagina_encontrada',
-            'contexto_linea', 'regex_captura', 'posicion_inicio', 'posicion_fin']
-
-# --- INICIO DE LAS NUEVAS FUNCIONES PARA SQLITE ---
-
     def initialize_database(self):
-        """
-        Crea el archivo de base de datos SQLite y la tabla 'extracted_tags' si no existen.
-        Define la llave primaria compuesta. Se debe llamar una vez por ejecución.
-        """
+        """Crea la tabla de la base de datos usando la lista de fieldnames centralizada."""
         try:
             self.logger.info(f"Inicializando la base de datos en: {self.db_path}")
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # Crear la tabla con los tipos de datos adecuados y la llave primaria compuesta
-            # Usamos "TEXT" para la mayoría de los campos para máxima flexibilidad.
-            # La llave primaria en (tag_formateado, documento_origen) previene duplicados.
-            create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {self.db_table_name} (
-                documento_origen TEXT,
-                area TEXT,
-                tag_capturado TEXT,
-                tag_formateado TEXT NOT NULL,
-                tag_base TEXT,
-                sufijo_equipo TEXT,
-                clasificacion_level_1 TEXT,
-                clasificacion_level_2 TEXT,
-                tag_code TEXT,
-                pagina_encontrada INTEGER,
-                contexto_linea TEXT,
-                regex_captura TEXT,
-                posicion_inicio INTEGER,
-                posicion_fin INTEGER,
-                PRIMARY KEY ("tag_formateado", "documento_origen")
-            );
-            """
+            columns_definitions = []
+            for field in self.fieldnames:
+                col_type = "INTEGER" if "pagina" in field or "posicion" in field else "TEXT"
+                columns_definitions.append(f'"{field}" {col_type}')
+            
+            pk = 'PRIMARY KEY ("tag_formateado", "documento_origen")'
+            
+            create_table_sql = f'CREATE TABLE IF NOT EXISTS "{self.db_table_name}" ({", ".join(columns_definitions)}, {pk});'
+            
             cursor.execute(create_table_sql)
             conn.commit()
             conn.close()
@@ -498,133 +330,53 @@ class PDFDataExtractor:
             raise
 
     def save_results_to_sqlite(self, results: List[Dict[str, Any]]):
-        """
-        Guarda una lista de resultados de tags en la base de datos SQLite.
-        Utiliza 'INSERT OR REPLACE' para manejar duplicados, actualizando el registro si ya existe.
-        """
-        if not results:
-            return
-
+        """Guarda los resultados en SQLite usando la lista de fieldnames centralizada."""
+        if not results: return
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            # Crear el statement de inserción parametrizado para evitar inyección SQL
-            # Usamos INSERT OR REPLACE para que si un tag de un documento ya existe, se actualice.
-            # Esto es útil si se re-procesa un archivo.
-            columns = ', '.join(self.fieldnames)
+            columns = ', '.join(f'"{f}"' for f in self.fieldnames)
             placeholders = ', '.join(['?'] * len(self.fieldnames))
-            sql = f"INSERT OR REPLACE INTO {self.db_table_name} ({columns}) VALUES ({placeholders})"
+            sql = f'INSERT OR REPLACE INTO "{self.db_table_name}" ({columns}) VALUES ({placeholders})'
             
-            # Preparar los datos como una lista de tuplas en el orden correcto
-            data_to_insert = []
-            for row_dict in results:
-                # Se asegura de que cada valor esté en el orden correcto de self.fieldnames
-                row_tuple = tuple(row_dict.get(field) for field in self.fieldnames)
-                data_to_insert.append(row_tuple)
-
+            data_to_insert = [tuple(row.get(field) for field in self.fieldnames) for row in results]
+            
             cursor.executemany(sql, data_to_insert)
             conn.commit()
             conn.close()
-            self.logger.info(f"Guardados {len(results)} registros en la base de datos SQLite.")
-
         except Exception as e:
             self.logger.error(f"Error al guardar resultados en SQLite: {e}")
-            # No relanzamos el error para no detener el procesamiento de los demás archivos        
-    
+
     def extract_from_single_pdf(self, pdf_path: Union[str, Path]) -> ExtractionResult:
-        """
-        Extract data from a single PDF file with comprehensive error handling.
-        
-        Args:
-            pdf_path: Path to the PDF file
-            
-        Returns:
-            ExtractionResult: Comprehensive extraction results with metrics
-        """
         pdf_path = Path(pdf_path)
         start_time = time.time()
         
-        # Initialize metrics
-        file_size_mb = pdf_path.stat().st_size / 1024 / 1024
-        metrics = ProcessingMetrics(
-            file_path=str(pdf_path),
-            file_size_mb=file_size_mb,
-            page_count=0,
-            processing_time_seconds=0.0,
-            peak_memory_mb=0.0,
-            extracted_tags_count=0,
-            error_count=0
-        )
-        
         try:
-            self.logger.info(f"Starting extraction for: {pdf_path} ({file_size_mb:.2f} MB)")
-            
-            # Validate file existence and size
             if not pdf_path.exists():
                 raise PDFFileNotFoundError(pdf_path)
-            
-            # if file_size_mb > 500:  # 500MB limit
-                # raise PDFExtractionError(
-                    # f"File size {file_size_mb:.2f}MB exceeds maximum limit of 500MB",
-                    # error_code="FILE_TOO_LARGE"
-                # )
-            
-            # Extract data with memory monitoring
+
+            self.logger.info(f"Starting extraction for: {pdf_path} ({pdf_path.stat().st_size / (1024*1024):.2f} MB)")
             all_extracted_data = []
+            page_count = 0
             
             for text_chunk, page_number in self.pdf_reader.extract_text_chunked(pdf_path):
-                metrics.page_count = page_number  # Update page count
-                
-                # Check memory usage
+                page_count = page_number
                 if self.memory_monitor.check_memory_threshold():
-                    self.logger.warning(f"Memory usage approaching limit during page {page_number}")
+                    self.logger.warning(f"Memory usage approaching limit on page {page_number}")
                 
-                # Extract tags from current chunk
-                chunk_data = self.data_extractor.extract_tags_from_text(
-                    text_chunk, page_number, pdf_path
-                )
+                chunk_data = self.data_extractor.extract_tags_from_text(text_chunk, page_number, pdf_path)
                 all_extracted_data.extend(chunk_data)
-                
-                # Update metrics
-                metrics.extracted_tags_count = len(all_extracted_data)
-                metrics.peak_memory_mb = self.memory_monitor.peak_memory
             
-            # Calculate final metrics
             processing_time = time.time() - start_time
-            metrics.processing_time_seconds = processing_time
-            
-            self.logger.info(
-                f"Extraction completed: {pdf_path} | "
-                f"Pages: {metrics.page_count} | "
-                f"Tags: {metrics.extracted_tags_count} | "
-                f"Time: {processing_time:.2f}s | "
-                f"Peak Memory: {metrics.peak_memory_mb:.1f}MB"
-            )
-            
-            return ExtractionResult(
-                document_path=pdf_path,
-                extracted_data=all_extracted_data,
-                processing_metrics=metrics.__dict__,
-                success=True,
-                processing_time=processing_time
-            )
+            metrics = {
+                'page_count': page_count, 'peak_memory_mb': self.memory_monitor.peak_memory
+            }
+            self.logger.info(f"Extraction completed: {len(all_extracted_data)} tags in {processing_time:.2f}s")
+            return ExtractionResult(pdf_path, all_extracted_data, metrics, True, processing_time=processing_time)
             
         except Exception as e:
-            processing_time = time.time() - start_time
-            metrics.error_count = 1
-            metrics.processing_time_seconds = processing_time
-            
             self.logger.error(f"Extraction failed for {pdf_path}: {e}")
-            
-            return ExtractionResult(
-                document_path=pdf_path,
-                extracted_data=[],
-                processing_metrics=metrics.__dict__,
-                success=False,
-                error_message=str(e),
-                processing_time=processing_time
-            )
+            return ExtractionResult(pdf_path, [], {}, False, str(e), time.time() - start_time)
     
     def extract_from_multiple_pdfs(
         self, 
