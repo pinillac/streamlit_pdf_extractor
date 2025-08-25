@@ -1,5 +1,5 @@
 Level 1,Level 2,Tag Code,Regex Pattern,Source,Notes
-Document,Document,DOC,"(?<![A-Za-z0-9-])\d{3}-[A-Z]-[A-Z]{3,4}-\d{5}-\d{3}(?![A-Za-z0-9-])",Propuesto,Captura IDs de documentos estándar. Ej: 018-A-PID-00012-001
+Document,Document,DOC,"(?<![A-Za-z0-9-])(?P<Area>\d{3})-(?P<System>[A-Z])-(?P<DocType>[A-Z]{3,4})-(?P<Sequential>\d{5})-(?P<Rev>\d{3})(?![A-Za-z0-9-])",Propuesto,Captura IDs de documentos con DocType. Ej: 018-A-PID-00012-001 -> DocType=PID
 Pipeline,Process,PIPE,"(?i)\b(?P<Unit>\d{3})-(?P<NPD>\d{1,2}"")-(?P<Fluid_Code>[A-Z])-(?P<Sequence>\d{4})-(?P<Piping_Class>[A-Z0-9]{3})(?:-(?P<Insulation>[A-Za-z]{1,2}))?\b",Propuesto,"[By-Spec] Desglosa Líneas de P&ID. Maneja aislamiento opcional. Ej: 018-3""-S-4299-D3S y 016-8""-P-1053-B1S-Ih"
 Equipment,Static,EQP,"(?i)\b(\d{3})([A-Z]{1,4})(\d{4})([A-Z]{0,3})\b",Propuesto,"[By-Spec] Formato oficial sin guiones (Pag.23). Ej: 062E6211A, 019C0001R"
 Equipment,Rotating,EQP,"(?i)\b(\d{3})-([A-Z]{1,4})-(\d{4})(?:-([A-Z]{1,3}))?\b",Propuesto,[Vendor-Error] Formato con guiones. Ej: 062-E-6211-A

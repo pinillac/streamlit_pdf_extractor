@@ -2,7 +2,7 @@
 """
 Enterprise-grade PDF Data Extractor for Technical Equipment Tag Recognition
 Author: Enterprise Development Team
-Version: 2.4.0 (Enhanced Equipment Tag Disaggregation)
+Version: 2.5.0 (Added Document DocType extraction)
 Python: 3.8+
 """
 
@@ -264,6 +264,9 @@ class DataExtractor:
                 info = self._create_base_tag_info(match, page_number, document_path)
                 info['tag_formateado'] = self._normalize_tag(tag_instance, info['clasificacion_level_1'])
                 
+                # Inicializar doc_type como None
+                info['doc_type'] = None
+                
                 # --- INICIO DE LA CORRECCIÓN: CONSOLIDACIÓN DE DATOS ---
                 
                 # Regla general para 'area': se extrae de los 3 primeros dígitos.
@@ -277,7 +280,24 @@ class DataExtractor:
                 # Lógica de desglose específica por tipo de tag
                 level1_class = info['clasificacion_level_1']
                 
-                if level1_class == 'ElectricalEquipment':
+                # NUEVO: Extracción de DocType para documentos
+                if level1_class == 'Document':
+                    try:
+                        # Extraer DocType del grupo nombrado
+                        doc_type = match_obj.group('DocType')
+                        info['doc_type'] = doc_type
+                        info['tag_base'] = tag_instance  # Para documentos, el tag_base es el tag completo
+                        info['sufijo_equipo'] = None
+                        self.logger.debug(f"Documento detectado: {tag_instance} con DocType: {doc_type}")
+                    except (IndexError, AttributeError):
+                        # Si no se puede extraer el DocType, intentar extraerlo manualmente
+                        # Formato esperado: XXX-X-DOCTYPE-XXXXX-XXX
+                        parts = tag_instance.split('-')
+                        if len(parts) >= 3:
+                            info['doc_type'] = parts[2]  # El tercer elemento es el DocType
+                        self.logger.warning(f"No se pudo extraer DocType con grupo nombrado para '{tag_instance}', extraído manualmente: {info.get('doc_type')}")
+                
+                elif level1_class == 'ElectricalEquipment':
                     groups = match_obj.groups()
                     info['tag_code'] = groups[0] if groups else ''
                     info['tag_base'] = groups[1] if len(groups) > 1 else '' # Sequence Number es la base
@@ -353,7 +373,7 @@ class PDFDataExtractor:
         self.memory_monitor = MemoryMonitor(max_memory_mb)
         self.logger = logging.getLogger(__name__)
 
-        # Centralización de la definición de columnas de salida
+        # Centralización de la definición de columnas de salida - ACTUALIZADO CON doc_type
         self.fieldnames = [
             'documento_origen',
             'tag_capturado',
@@ -364,6 +384,7 @@ class PDFDataExtractor:
             'clasificacion_level_1',
             'clasificacion_level_2',
             'tag_code',
+            'doc_type',  # NUEVO CAMPO AGREGADO
             'piping_npd',
             'piping_fluid_code',
             'piping_sequence',
