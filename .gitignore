@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+venv_stream/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.pdf
+temp/
+output/
+*.db
+*.csv
+!taxonomy_1.csv  # Mantener este archivo CSV específico
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation build
+docs/_build/

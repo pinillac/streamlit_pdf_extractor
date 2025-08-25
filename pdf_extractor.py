@@ -2,7 +2,7 @@
 """
 Enterprise-grade PDF Data Extractor for Technical Equipment Tag Recognition
 Author: Enterprise Development Team
-Version: 2.3.0 (Enhanced with Advanced Disassembly and Filtering)
+Version: 2.4.0 (Enhanced Equipment Tag Disaggregation)
 Python: 3.8+
 """
 
@@ -144,17 +144,89 @@ class DataExtractor:
         return tag
 
     def _disaggregate_tag(self, tag: str) -> List[str]:
-        if '/' in tag:
-            parts = tag.split('/')
+        """
+        Desagrega tags con formato A/B/C/D en tags individuales
+        Maneja múltiples formatos:
+        - TAG123A/B/C → TAG123A, TAG123B, TAG123C
+        - TAG-123-A/B/C → TAG-123-A, TAG-123-B, TAG-123-C
+        - TAG123/A/B/C → TAG123A, TAG123B, TAG123C
+        - 062E6211A/B/C → 062E6211A, 062E6211B, 062E6211C
+        """
+        if '/' not in tag:
+            return [tag]
+        
+        # Método 1: Buscar si hay un patrón letra/letra al final (más común)
+        # Ejemplo: 062E6211A/B/C o TAG-123-A/B/C
+        pattern1 = r'^(.*?)([A-Z])(/[A-Z])+$'
+        match1 = re.match(pattern1, tag)
+        
+        if match1:
+            # Extraer la base y la primera letra
+            base = match1.group(1)  # "062E6211" o "TAG-123-"
+            first_letter = match1.group(2)  # "A"
+            
+            # Obtener todas las letras
+            rest_part = tag[len(base) + len(first_letter):]  # "/B/C"
+            other_letters = [l for l in rest_part.split('/') if l]  # ["B", "C"]
+            
+            # Combinar todas las letras
+            all_letters = [first_letter] + other_letters
+            
+            # Crear los tags desagregados
+            return [base + letter for letter in all_letters]
+        
+        # Método 2: Buscar si hay un patrón /letra/letra (menos común)
+        # Ejemplo: TAG123/A/B/C
+        pattern2 = r'^(.*?)/([A-Z](/[A-Z])+)$'
+        match2 = re.match(pattern2, tag)
+        
+        if match2:
+            base = match2.group(1)  # "TAG123"
+            letters_part = match2.group(2)  # "A/B/C"
+            letters = [l for l in letters_part.split('/') if l]  # ["A", "B", "C"]
+            
+            # Si la base termina con guión, mantenerlo
+            if base.endswith('-'):
+                return [base + letter for letter in letters]
+            else:
+                # Si no hay guión, agregar las letras directamente
+                return [base + letter for letter in letters]
+        
+        # Método 3: Manejo especial para patrones con múltiples partes
+        # Ejemplo: 062-E-6211-A/B/C donde necesitamos mantener la estructura
+        parts = tag.split('/')
+        if len(parts) > 1:
+            # Verificar si la primera parte termina con una letra mayúscula
             first_part = parts[0]
-            base_match = re.match(r'^(.*[0-9])([A-Z])$', first_part)
+            base_match = re.match(r'^(.*?)([A-Z])$', first_part)
+            
             if base_match:
-                tag_base, first_suffix = base_match.groups()
-                disaggregated = [f"{tag_base}{first_suffix}"]
-                for suffix in parts[1:]:
-                    if len(suffix) == 1 and suffix.isalpha():
-                        disaggregated.append(f"{tag_base}{suffix}")
-                return disaggregated
+                # La primera parte termina con letra
+                tag_base = base_match.group(1)  # "062-E-6211-" o "062E6211"
+                first_suffix = base_match.group(2)  # "A"
+                
+                # Verificar que las otras partes son letras simples
+                if all(len(p) == 1 and p.isalpha() and p.isupper() for p in parts[1:]):
+                    # Todas las partes posteriores son letras simples
+                    disaggregated = [tag_base + first_suffix]
+                    for suffix in parts[1:]:
+                        disaggregated.append(tag_base + suffix)
+                    return disaggregated
+            else:
+                # La primera parte no termina con letra, verificar si las partes son letras simples
+                if all(len(p) == 1 and p.isalpha() and p.isupper() for p in parts[1:]):
+                    # Es un patrón como TAG123/A/B/C
+                    base = first_part
+                    # Si la base termina con guión, mantenerlo
+                    if not base.endswith('-'):
+                        # Agregar directamente
+                        return [base + letter for letter in parts[1:]]
+                    else:
+                        # Con guión al final
+                        return [base + letter for letter in parts[1:]]
+        
+        # Si no coincide con ningún patrón conocido, devolver el tag original
+        self.logger.debug(f"Tag '{tag}' no coincide con patrones de desagregación conocidos")
         return [tag]
 
     def _create_base_tag_info(self, match_details: Dict, page_num: int, doc_path: Path) -> Dict:
@@ -180,7 +252,13 @@ class DataExtractor:
             if match['clasificacion_level_1'] == 'Document' and doc_name_without_ext in match['tag_capturado']:
                 continue
 
-            disaggregated_tags = self._disaggregate_tag(match['tag_capturado'])
+            # Aplicar desagregación para Equipos e Instrumentos
+            # MEJORA: Ahora la desagregación se aplica específicamente a Equipment e Instrument
+            if match['clasificacion_level_1'] in ['Equipment', 'Instrument']:
+                disaggregated_tags = self._disaggregate_tag(match['tag_capturado'])
+                self.logger.debug(f"Desagregando {match['clasificacion_level_1']} tag '{match['tag_capturado']}' en: {disaggregated_tags}")
+            else:
+                disaggregated_tags = [match['tag_capturado']]
             
             for tag_instance in disaggregated_tags:
                 info = self._create_base_tag_info(match, page_number, document_path)
@@ -216,7 +294,7 @@ class DataExtractor:
                     except IndexError:
                         self.logger.warning(f"Patrón de Piping sin grupos nombrados para '{match['tag_capturado']}'.")
                 else:
-                    # Lógica general para 'tag_base' y 'sufijo_equipo' para otros tipos
+                    # Lógica general para 'tag_base' y 'sufijo_equipo' para otros tipos (incluido Equipment)
                     tag_base = info['tag_formateado']
                     sufijo = None
                     sufijo_match = re.search(r'([A-Z])$', tag_base)
@@ -465,7 +543,7 @@ class PDFDataExtractor:
             self.logger.warning("No data to save to CSV")
             return self.csv_writer.output_directory / output_filename
         
-        return self.csv_writer.write_results(all_data, output_filename)
+        return self.csv_writer.write_results(all_data, output_filename, self.fieldnames)
     
     def get_performance_summary(self, results: List[ExtractionResult]) -> Dict[str, Any]:
         """Generate performance summary from extraction results."""
